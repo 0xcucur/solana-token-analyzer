@@ -35,47 +35,51 @@ async function heliusRpc(method, params = []) {
   return data.result;
 }
 
-// ─── TOKEN METADATA ───
+// ─── TOKEN METADATA (via getAsset DAS API) ───
 async function getTokenMetadata(mintAddress) {
-  // Get account info
-  const accountInfo = await heliusRpc('getAccountInfo', [
-    mintAddress,
-    { encoding: 'jsonParsed' },
-  ]);
+  const asset = await heliusRpc('getAsset', [mintAddress]);
 
-  if (!accountInfo?.value) throw new Error('Token not found');
+  if (!asset) throw new Error('Token not found');
 
-  const data = accountInfo.value.data.parsed.info;
+  const metadata = asset.content?.metadata || {};
+  const tokenInfo = asset.token_info || {};
+
   return {
     mint: mintAddress,
-    name: data.name || 'Unknown',
-    symbol: data.symbol || '???',
-    supply: parseFloat(data.supply) / Math.pow(10, data.decimals),
-    decimals: data.decimals,
-    mintAuthority: data.mintAuthority,
-    freezeAuthority: data.freezeAuthority,
+    name: metadata.name || 'Unknown',
+    symbol: metadata.symbol || '???',
+    supply: (tokenInfo.supply || 0) / Math.pow(10, tokenInfo.decimals || 0),
+    decimals: tokenInfo.decimals || 0,
+    mintAuthority: tokenInfo.mint_authority || null,
+    freezeAuthority: tokenInfo.freeze_authority || null,
   };
 }
 
-// ─── HOLDER ANALYSIS ───
+// ─── HOLDER ANALYSIS (via RugCheck API) ───
 async function getHolderAnalysis(mintAddress) {
   try {
-    const largestAccounts = await heliusRpc('getTokenLargestAccounts', [mintAddress]);
-    const accounts = largestAccounts.value || [];
+    const res = await fetch(`https://api.rugcheck.xyz/v1/tokens/${mintAddress}/report`);
+    const data = await res.json();
+    const topHolders = data.topHolders || [];
 
-    let totalHeld = 0;
-    const top10 = accounts.slice(0, 10);
-    for (const acc of top10) {
-      totalHeld += parseFloat(acc.uiAmountString || '0');
+    if (!topHolders.length) {
+      return { totalAccounts: 0, top10Held: 0, top10Amount: 0, accounts: [] };
+    }
+
+    const supply = data.token?.supply || 1;
+    const top5 = topHolders.slice(0, 5);
+    let top5Pct = 0;
+    for (const h of top5) {
+      top5Pct += h.pct || ((h.amount / supply) * 100);
     }
 
     return {
-      totalAccounts: accounts.length,
-      top10Held: totalHeld,
-      top10Amount: totalHeld,
-      accounts: accounts.slice(0, 5).map(a => ({
-        address: a.address,
-        amount: parseFloat(a.uiAmountString || '0'),
+      totalAccounts: topHolders.length,
+      top10Held: parseFloat(top5Pct.toFixed(2)),
+      top10Amount: top5Pct,
+      accounts: top5.map(h => ({
+        address: h.owner || h.address,
+        pct: parseFloat((h.pct || 0).toFixed(2)),
       })),
     };
   } catch {
@@ -83,19 +87,19 @@ async function getHolderAnalysis(mintAddress) {
   }
 }
 
-// ─── LIQUIDITY CHECK ───
+// ─── LIQUIDITY CHECK (via Jupiter Ultra API) ───
 async function getLiquidityInfo(mintAddress) {
   try {
-    // Check via Jupiter quote for a small swap
-    const quoteUrl = `https://quote-api.jup.ag/v6/quote?inputMint=So11111111111111111111111111111111111111112&outputMint=${mintAddress}&amount=100000000&slippageBps=500`;
+    // Check via Jupiter Ultra API for a small swap (1 SOL worth)
+    const quoteUrl = `https://api.jup.ag/ultra/v1/order?inputMint=So11111111111111111111111111111111111111112&outputMint=${mintAddress}&amount=100000000`;
     const res = await fetch(quoteUrl);
     const data = await res.json();
 
-    if (data.error) {
-      return { available: false, reason: data.error };
+    if (data.swapMode !== 'ExactIn' && !data.outAmount) {
+      return { available: false, reason: 'No route found' };
     }
 
-    const priceImpact = parseFloat(data.priceImpactPct || '0');
+    const priceImpact = Math.abs(parseFloat(data.priceImpactPct || '0'));
     return {
       available: true,
       priceImpact,
@@ -178,7 +182,7 @@ function displayResults(metadata, holders, liquidity, risk) {
   if (holders.accounts.length > 0) {
     console.log('  Largest holders:');
     for (const h of holders.accounts.slice(0, 3)) {
-      console.log(`    ${h.address.slice(0, 8)}...${h.address.slice(-4)} — ${h.amount.toLocaleString()}`);
+      console.log(`    ${h.address.slice(0, 8)}...${h.address.slice(-4)} — ${h.pct.toFixed(2)}%`);
     }
   }
 
