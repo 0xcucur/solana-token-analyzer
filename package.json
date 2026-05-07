@@ -1,0 +1,16 @@
+{
+  "name": "solana-token-analyzer",
+  "version": "1.0.0",
+  "description": "CLI tool to analyze Solana tokens — rug check, holder distribution, liquidity, and risk scoring.",
+  "main": "analyze.js",
+  "scripts": {
+    "start": "node analyze.js"
+  },
+  "dependencies": {
+    "@solana/web3.js": "^1.98.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}

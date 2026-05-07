@@ -14,7 +14,13 @@
  *   6. Output verdict
  */
 
-const { HELIUS_RPC, RISK_WEIGHTS, VERDICT } = require('./config.example');
+let config;
+try {
+  config = require('./config');
+} catch {
+  config = require('./config.example');
+}
+const { HELIUS_RPC, RISK_WEIGHTS, VERDICT } = config;
 const { Connection, PublicKey } = require('@solana/web3.js');
 
 // ─── HELIUS RPC ───
@@ -66,14 +72,14 @@ async function getHolderAnalysis(mintAddress) {
     return {
       totalAccounts: accounts.length,
       top10Held: totalHeld,
-      top10Pct: totalHeld, // We'll calculate % against supply later
+      top10Amount: totalHeld,
       accounts: accounts.slice(0, 5).map(a => ({
         address: a.address,
         amount: parseFloat(a.uiAmountString || '0'),
       })),
     };
   } catch {
-    return { totalAccounts: 0, top10Held: 0, top10Pct: 0, accounts: [] };
+    return { totalAccounts: 0, top10Held: 0, top10Amount: 0, accounts: [] };
   }
 }
 
@@ -120,7 +126,7 @@ function calculateRiskScore(metadata, holders, liquidity) {
   }
 
   // Holder concentration
-  if (holders.top10Pct > metadata.supply * 0.8) {
+  if (holders.top10Amount > metadata.supply * 0.8) {
     score += RISK_WEIGHTS.holderConcentration;
     flags.push('⚠️ Top 10 holders own >80% of supply');
   }

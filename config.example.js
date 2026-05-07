@@ -5,16 +5,8 @@
  *   HELIUS_RPC  — Solana RPC endpoint (required)
  */
 
-const path = require('path');
-
 // RPC endpoint — reads from env or uses placeholder
 const HELIUS_RPC = process.env.HELIUS_RPC || 'https://mainnet.helius-rpc.com/?api-key=YOUR_API_KEY';
-
-// Meteora Pool Discovery API (public, no auth)
-const METEORA_API = 'https://pool-discovery-api.datapi.meteora.ag/pools';
-
-// CoinGecko (free tier, no key needed for simple price)
-const COINGECKO_API = 'https://api.coingecko.com/api/v3';
 
 // Risk scoring weights
 const RISK_WEIGHTS = {
@@ -34,4 +26,4 @@ const VERDICT = {
   // Score > 60 = RUG RISK TINGGI
 };
 
-module.exports = { HELIUS_RPC, METEORA_API, COINGECKO_API, RISK_WEIGHTS, VERDICT };
+module.exports = { HELIUS_RPC, RISK_WEIGHTS, VERDICT };

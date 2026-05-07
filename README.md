@@ -4,10 +4,24 @@ A command-line tool to analyze Solana tokens before buying — rug check, holder
 
 ## Features
 
-- 🔍 **Rug Pull Detection** — Check mint/freeze authority, LP lock status
-- 👥 **Holder Analysis** — Distribution, top holder concentration, dev wallets
-- 💧 **Liquidity Check** — Pool depth, TVL, volume ratio
+- 🔍 **Rug Pull Detection** — Check mint/freeze authority
+- 👥 **Holder Analysis** — Top holder concentration
+- 💧 **Liquidity Check** — Pool depth via Jupiter quotes
 - 🎯 **Risk Score** — 0-100 score with clear verdict (AMAN / HATI-HATI / RUG)
+
+## Requirements
+
+- Node.js 18+
+- Helius API key (free tier works)
+
+## Setup
+
+```bash
+npm install
+cp config.example.js config.js
+# Edit config.js with your Helius API key
+node analyze.js <TOKEN_MINT_ADDRESS>
+```
 
 ## Usage
 
@@ -30,34 +44,20 @@ node analyze.js EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v
 🔒 Security
   Mint Authority:    ✅ Revoked
   Freeze Authority:  ✅ Revoked
-  LP Lock:           ✅ Locked
 
 👥 Holders
-  Total Holders:     2,450,000
-  Top 10 Concentration: 45.2%
-  Dev Wallet:        0.01%
+  Top accounts:      10
+  Largest holders:
+    ABCD1234...5678 — 500,000,000
 
 💧 Liquidity
-  TVL:              $180,000,000
-  24h Volume:       $50,000,000
-  Vol/TVL Ratio:    0.28
+  Available:         ✅ Yes
+  Price Impact:      0.05%
+  Routes:            2
+  Deep Liquidity:    ✅
 
 🎯 Risk Score: 5/100
-✅ VERDIKT: AMAN — Token verified, authority revoked, high liquidity
-```
-
-## Requirements
-
-- Node.js 18+
-- Helius API key (free tier works)
-
-## Setup
-
-```bash
-npm install
-cp config.example.js config.js
-# Edit config.js with your Helius API key
-node analyze.js <TOKEN_ADDRESS>
+✅ VERDIKT: AMAN
 ```
 
 ## License
